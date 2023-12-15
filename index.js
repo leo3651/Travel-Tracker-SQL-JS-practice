@@ -4,7 +4,8 @@ import pg from "pg";
 
 const app = express();
 const port = 3000;
-var alreadyVisited;
+var alreadyVisited = false;
+let visitedCountries;
 
 const db = new pg.Client({
   user: "postgres",
@@ -19,12 +20,12 @@ db.connect();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-app.get("/", async(req, res) => {
+app.get("/", async(req, res) => { 
   //Array of visited countries
 
   const countries = await db.query(
     "SELECT country_code FROM visited_countries");
-  let visitedCountries = [];
+  visitedCountries = [];
   countries.rows.forEach((country) => {
     visitedCountries.push(country.country_code)});
   res.render("index.ejs", {
@@ -39,10 +40,10 @@ app.post("/add", async(req, res) => {
   const countryCode = await db.query(
     "SELECT country_code FROM countries WHERE LOWER(country_name) = $1", 
     [input]);
-  if (countryCode.rowCount != 0) 
+  if (countryCode.rowCount != 0)  
   {
     visitedCountries.forEach((visitedCountry) => {
-      if (visitedCountry.country_code === countryCode.rows[0]["country_code"]);
+      if (visitedCountry === countryCode.rows[0]["country_code"])
       {
         alreadyVisited = true;
       }})
@@ -54,7 +55,7 @@ app.post("/add", async(req, res) => {
     }
   } 
   res.redirect("/");
-  alreadyExists = false;
+  alreadyVisited = false;
 });
 
 app.listen(port, () => {

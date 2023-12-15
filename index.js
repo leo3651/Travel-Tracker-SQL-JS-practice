@@ -4,7 +4,7 @@ import pg from "pg";
 
 const app = express();
 const port = 3000;
-var alreadyExists;
+var alreadyVisited;
 
 const db = new pg.Client({
   user: "postgres",
@@ -20,39 +20,41 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 app.get("/", async(req, res) => {
-  //Write your code here.
+  //Array of visited countries
+
   const countries = await db.query(
     "SELECT country_code FROM visited_countries");
-  let visited_countries = [];
+  let visitedCountries = [];
   countries.rows.forEach((country) => {
-    visited_countries.push(country.country_code)});
+    visitedCountries.push(country.country_code)});
   res.render("index.ejs", {
-    countries: visited_countries, 
-    total: visited_countries.length});
+    countries: visitedCountries, 
+    total: visitedCountries.length});
 });
 
 app.post("/add", async(req, res) => {
+  //Inserting inputed country in db therefore in array of visited countries
+
   const input = req.body["country"].toLowerCase();
-  const country = await db.query(
+  const countryCode = await db.query(
     "SELECT country_code FROM countries WHERE LOWER(country_name) = $1", 
-    [input])
-  const countries_visited = await db.query("SELECT country_code from visited_countries")
-  
-  if (country.rowCount != 0) 
+    [input]);
+  if (countryCode.rowCount != 0) 
   {
-    countries_visited.rows.forEach((countryVisited) => {
-      if (countryVisited.country_code === country.rows[0]["country_code"])
+    visitedCountries.forEach((visitedCountry) => {
+      if (visitedCountry.country_code === countryCode.rows[0]["country_code"]);
       {
-        alreadyExists = true
-      }
-    })
-    if (alreadyExists === false)
+        alreadyVisited = true;
+      }})
+    if (alreadyVisited === false)
     {
-      await db.query("INSERT INTO visited_countries (country_code) VALUES ($1)", [country.rows[0]["country_code"]])
+      await db.query(
+        "INSERT INTO visited_countries (country_code) VALUES ($1)", 
+        [countryCode.rows[0]["country_code"]]);
     }
   } 
-  res.redirect("/") 
-  alreadyExists = false 
+  res.redirect("/");
+  alreadyExists = false;
 });
 
 app.listen(port, () => {

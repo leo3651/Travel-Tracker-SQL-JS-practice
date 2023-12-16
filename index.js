@@ -4,7 +4,6 @@ import pg from "pg";
 
 const app = express();
 const port = 3000;
-var alreadyVisited = false;
 let visitedCountries;
 
 const db = new pg.Client({
@@ -22,7 +21,6 @@ app.use(express.static("public"));
 
 app.get("/", async(req, res) => { 
   //Array of visited countries
-
   const countries = await db.query(
     "SELECT country_code FROM visited_countries");
   visitedCountries = [];
@@ -34,29 +32,38 @@ app.get("/", async(req, res) => {
 });
 
 app.post("/add", async(req, res) => {
-  //Inserting inputed country in db therefore in array of visited countries
-
   const input = req.body["country"].toLowerCase();
-  const countryCode = await db.query(
-    "SELECT country_code FROM countries WHERE LOWER(country_name) = $1", 
-    [input]);
-  if (countryCode.rowCount != 0)  
+  //Verify the input
+  try
   {
-    visitedCountries.forEach((visitedCountry) => {
-      if (visitedCountry === countryCode.rows[0]["country_code"])
-      {
-        alreadyVisited = true;
-      }})
-    if (alreadyVisited === false)
+    const result = await db.query("SELECT country_code FROM countries WHERE LOWER(country_name) = $1", [input])
+    const countryCode = result.rows[0].country_code
+    //Verify the INSERT
+    try
     {
-      await db.query(
-        "INSERT INTO visited_countries (country_code) VALUES ($1)", 
-        [countryCode.rows[0]["country_code"]]);
+      await db.query("INSERT INTO visited_countries (country_code) VALUES ($1)", [countryCode])
+      res.redirect("/")
     }
-  } 
-  res.redirect("/");
-  alreadyVisited = false;
-});
+    catch(error)
+    {
+      console.error("Error is: ", error)
+      res.render("index.ejs", {
+        countries: visitedCountries,
+        total: visitedCountries.length,
+        error: "Country already marked."
+      })
+    }
+  }
+  catch(error)
+  {
+    console.error("Error is: ", error)
+    res.render("index.ejs", {
+      countries: visitedCountries,
+      total: visitedCountries.length,
+      error: "Country does not exist."
+    })
+  }
+})
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
